@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8"/>
-        <title>Barcelona Bus Stops</title>
+        <title>Barcelona Bus Stops & Air Quality Map</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
         <!-- Leaflet -->
@@ -19,23 +19,47 @@
                 height: 100%;
                 font-family: sans-serif;
             }
-
             #map {
                 width: 100%;
                 height: 100%;
             }
-
-            #filterUI {
+            #aqiFilterUI,
+            #filterUI,
+            #layerToggleUI {
                 position: absolute;
-                top: 10px;
-                left: 50px;
-                z-index: 1000;
                 background: rgba(255, 255, 255, 0.9);
                 padding: 10px;
                 border-radius: 8px;
                 box-shadow: 0 0 5px rgba(0,0,0,0.3);
+                z-index: 1000;
+            }
+            #filterUI {
+                left: 50px;
+                top: 10px;
+            }
+            #layerToggleUI {
+                right: 10px;
+                top: 10px;
+            }
+            #aqiFilterUI {
+                right: 10px;
+                top: 70px;
+                display: none;
             }
 
+            #layerToggleUI button {
+                margin: 0 5px;
+                padding: 8px 12px;
+                border: none;
+                background-color: #eee;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            #layerToggleUI button.active {
+                background-color: #007bff;
+                color: white;
+                font-weight: bold;
+            }
             .legend {
                 background: rgba(255, 255, 255, 0.9);
                 padding: 10px;
@@ -44,7 +68,6 @@
                 box-shadow: 0 0 5px rgba(0,0,0,0.3);
                 font-size: 14px;
             }
-
             .legend i {
                 width: 14px;
                 height: 14px;
@@ -63,6 +86,22 @@
                 <option value="All">All</option>
             </select>
         </div>
+
+        <div id="layerToggleUI">
+            <button id="showStops" class="active">Toon Bushaltes</button>
+            <button id="showAir">Toon Luchtkwaliteit</button>
+        </div>
+
+        <div id="aqiFilterUI">
+            <label for="aqiSelect">Filter op AQI:</label>
+            <select id="aqiSelect">
+                <option value="all">Alle</option>
+                <option value="50">AQI &lt; 50</option>
+                <option value="100">AQI &lt; 100</option>
+                <option value="100plus">AQI ≥ 100</option>
+            </select>
+        </div>
+
         <div id="map"></div>
 
         <script>
@@ -71,25 +110,24 @@
                 .setView([
                     41.3851, 2.1734
                 ], 13);
-
             L
                 .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap contributors'})
                 .addTo(map);
 
             let busStops = [];
-            let markersLayer = L
+            let airQualityData = [];
+            const stopLayer = L
                 .layerGroup()
                 .addTo(map);
+            const airLayer = L.layerGroup();
 
             function populateFilterOptions(data) {
                 const typeSet = new Set();
-
                 data.forEach(stop => {
-                    if (stop["Transport"]) {
+                    if (stop["Transport"]) 
                         typeSet.add(stop["Transport"].trim());
                     }
-                });
-
+                );
                 const select = document.getElementById("typeSelect");
                 typeSet.forEach(type => {
                     const option = document.createElement("option");
@@ -112,13 +150,25 @@
                 }
             }
 
-            function renderStops(filterType) {
-                markersLayer.clearLayers();
+            function getAQIColor(aqi) {
+                if (aqi <= 50) 
+                    return "#009966";
+                if (aqi <= 100) 
+                    return "#ffde33";
+                if (aqi <= 150) 
+                    return "#ff9933";
+                if (aqi <= 200) 
+                    return "#cc0033";
+                if (aqi <= 300) 
+                    return "#660099";
+                return "#7e0023";
+            }
 
+            function renderStops(filterType) {
+                stopLayer.clearLayers();
                 busStops.forEach(stop => {
                     if (!stop.Latitude || !stop.Longitude) 
                         return;
-                    
                     const type = stop["Transport"];
                     if (filterType !== "All" && type !== filterType) 
                         return;
@@ -139,13 +189,70 @@
                             fillOpacity: 0.9
                         })
                         .bindPopup(`
-                            <strong>${stop["Bus.Stop"] || "Onbekende halte"}</strong><br/>
-                            Type: ${type || "?"}<br/>
-                            District: ${stop["District.Name"] || "?"}<br/>
-                            Neighborhood: ${stop["Neighborhood.Name"] || "?"}
-                        `);
-                    markersLayer.addLayer(marker);
+                        <strong>${stop["Bus.Stop"] || "Onbekende halte"}</strong><br/>
+                        Type: ${type || "?"}<br/>
+                        District: ${stop["District.Name"] || "?"}<br/>
+                        Neighborhood: ${stop["Neighborhood.Name"] || "?"}
+                    `);
+                    stopLayer.addLayer(marker);
                 });
+            }
+
+            function renderAirStations() {
+                airLayer.clearLayers();
+                const selected = document
+                    .getElementById("aqiSelect")
+                    .value;
+
+                airQualityData.forEach(station => {
+                    const {lat, lon, aqi, station: info} = station;
+                    if (selected === "50" && aqi >= 50) 
+                        return;
+                    if (selected === "100" && aqi >= 100) 
+                        return;
+                    if (selected === "100plus" && aqi < 100) 
+                        return;
+                    
+                    const marker = L
+                        .circleMarker([
+                            lat, lon
+                        ], {
+                            radius: 8,
+                            fillColor: getAQIColor(aqi),
+                            color: "#000",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        })
+                        .bindPopup(`
+                        <strong>Luchtkwaliteitsstation</strong><br/>
+                        Locatie: ${info.name}<br/>
+                        AQI: ${aqi}
+                    `);
+
+                    airLayer.addLayer(marker);
+                });
+            }
+
+            function loadAirData() {
+                const bbox = "41.32,2.08,41.47,2.23";
+                const token = "1d545caba3a254b1e1799bbdc7cb0486d826b3af";
+                const url = `https://api.waqi.info/map/bounds/?latlng=${bbox}&token=${token}`;
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status !== "ok") {
+                            alert("Fout bij ophalen luchtkwaliteitsdata.");
+                            return;
+                        }
+                        airQualityData = data.data;
+                        renderAirStations();
+                    })
+                    .catch(error => {
+                        console.error("API fout:", error);
+                        alert("Kon geen data ophalen van de luchtkwaliteits-API.");
+                    });
             }
 
             function loadData() {
@@ -166,31 +273,96 @@
                     renderStops(e.target.value);
                 });
 
-            loadData();
+            document
+                .getElementById("aqiSelect")
+                .addEventListener("change", () => {
+                    renderAirStations();
+                });
 
-            // Voeg legenda toe
+            const showStopsBtn = document.getElementById("showStops");
+            const showAirBtn = document.getElementById("showAir");
+
+            showStopsBtn.addEventListener("click", () => {
+                map.addLayer(stopLayer);
+                map.removeLayer(airLayer);
+                document
+                    .getElementById("filterUI")
+                    .style
+                    .display = "block";
+                document
+                    .getElementById("aqiFilterUI")
+                    .style
+                    .display = "none";
+                setActiveButton(showStopsBtn);
+                updateLegend("bus");
+            });
+
+            showAirBtn.addEventListener("click", () => {
+                if (!map.hasLayer(airLayer)) 
+                    loadAirData();
+                map.addLayer(airLayer);
+                map.removeLayer(stopLayer);
+                document
+                    .getElementById("filterUI")
+                    .style
+                    .display = "none";
+                document
+                    .getElementById("aqiFilterUI")
+                    .style
+                    .display = "block";
+                setActiveButton(showAirBtn);
+                updateLegend("air");
+            });
+
+            function setActiveButton(activeBtn) {
+                [showStopsBtn, showAirBtn].forEach(btn => btn.classList.remove("active"));
+                activeBtn
+                    .classList
+                    .add("active");
+            }
+
             const legend = L.control({position: 'bottomright'});
-
-            legend.onAdd = function (map) {
+            legend.onAdd = function () {
                 const div = L
                     .DomUtil
                     .create('div', 'legend');
-                const types = {
-                    "Day bus stop": "#f4c542",
-                    "Night bus stop": "#426df4",
-                    "Airport bus stop": "#42f4a1",
-                    "Other": "#ff5533"
-                };
-
-                div.innerHTML += "<strong>Bus Types</strong><br>";
-                for (let key in types) {
-                    div.innerHTML += `<i style="background:${types[key]}"></i>${key}<br>`;
-                }
-
+                div.innerHTML = ''; // start leeg
                 return div;
             };
-
             legend.addTo(map);
+
+            function updateLegend(type) {
+                const div = document.querySelector('.legend');
+                div.innerHTML = '';
+                if (type === "bus") {
+                    const types = {
+                        "Day bus stop": "#f4c542",
+                        "Night bus stop": "#426df4",
+                        "Airport bus stop": "#42f4a1",
+                        "Other": "#ff5533"
+                    };
+                    div.innerHTML += "<strong>Bus Types</strong><br>";
+                    for (let key in types) {
+                        div.innerHTML += `<i style="background:${types[key]}"></i>${key}<br>`;
+                    }
+                } else {
+                    const levels = {
+                        "AQI ≤ 50 (Goed)": "#009966",
+                        "AQI ≤ 100": "#ffde33",
+                        "AQI ≤ 150": "#ff9933",
+                        "AQI ≤ 200": "#cc0033",
+                        "AQI ≤ 300": "#660099",
+                        "> 300": "#7e0023"
+                    };
+                    div.innerHTML += "<strong>Luchtkwaliteit</strong><br>";
+                    for (let key in levels) {
+                        div.innerHTML += `<i style="background:${levels[key]}"></i>${key}<br>`;
+                    }
+                }
+            }
+
+            loadData();
+            updateLegend("bus");
         </script>
     </body>
 </html>
