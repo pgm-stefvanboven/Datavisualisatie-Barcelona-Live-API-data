@@ -35,6 +35,25 @@
                 border-radius: 8px;
                 box-shadow: 0 0 5px rgba(0,0,0,0.3);
             }
+
+            .legend {
+                background: rgba(255, 255, 255, 0.9);
+                padding: 10px;
+                line-height: 1.5;
+                border-radius: 8px;
+                box-shadow: 0 0 5px rgba(0,0,0,0.3);
+                font-size: 14px;
+            }
+
+            .legend i {
+                width: 14px;
+                height: 14px;
+                float: left;
+                margin-right: 8px;
+                opacity: 0.9;
+                border-radius: 50%;
+                margin-top: 2px;
+            }
         </style>
     </head>
     <body>
@@ -80,6 +99,19 @@
                 });
             }
 
+            function getColorForType(type) {
+                switch (type) {
+                    case "Day bus stop":
+                        return "#f4c542";
+                    case "Night bus stop":
+                        return "#426df4";
+                    case "Airport bus stop":
+                        return "#42f4a1";
+                    default:
+                        return "#ff5533";
+                }
+            }
+
             function renderStops(filterType) {
                 markersLayer.clearLayers();
 
@@ -87,31 +119,31 @@
                     if (!stop.Latitude || !stop.Longitude) 
                         return;
                     
-                    // Filter op Transport-type
-                    if (filterType !== "All" && stop["Transport"] !== filterType) 
+                    const type = stop["Transport"];
+                    if (filterType !== "All" && type !== filterType) 
                         return;
                     
                     const lat = parseFloat(stop.Latitude);
                     const lng = parseFloat(stop.Longitude);
+                    const color = getColorForType(type);
 
                     const marker = L
                         .circleMarker([
                             lat, lng
                         ], {
                             radius: 4,
-                            fillColor: "#ff5533",
+                            fillColor: color,
                             color: "#fff",
                             weight: 1,
                             opacity: 1,
-                            fillOpacity: 0.8
+                            fillOpacity: 0.9
                         })
                         .bindPopup(`
-                    <strong>${stop["Bus.Stop"] || "Onbekende halte"}</strong><br/>
-                    Type: ${stop["Transport"] || "?"}<br/>
-                    District: ${stop["District.Name"] || "?"}<br/>
-                    Neighborhood: ${stop["Neighborhood.Name"] || "?"}
-                `);
-
+                            <strong>${stop["Bus.Stop"] || "Onbekende halte"}</strong><br/>
+                            Type: ${type || "?"}<br/>
+                            District: ${stop["District.Name"] || "?"}<br/>
+                            Neighborhood: ${stop["Neighborhood.Name"] || "?"}
+                        `);
                     markersLayer.addLayer(marker);
                 });
             }
@@ -135,6 +167,30 @@
                 });
 
             loadData();
+
+            // Voeg legenda toe
+            const legend = L.control({position: 'bottomright'});
+
+            legend.onAdd = function (map) {
+                const div = L
+                    .DomUtil
+                    .create('div', 'legend');
+                const types = {
+                    "Day bus stop": "#f4c542",
+                    "Night bus stop": "#426df4",
+                    "Airport bus stop": "#42f4a1",
+                    "Other": "#ff5533"
+                };
+
+                div.innerHTML += "<strong>Bus Types</strong><br>";
+                for (let key in types) {
+                    div.innerHTML += `<i style="background:${types[key]}"></i>${key}<br>`;
+                }
+
+                return div;
+            };
+
+            legend.addTo(map);
         </script>
     </body>
 </html>
