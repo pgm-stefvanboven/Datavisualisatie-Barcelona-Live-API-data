@@ -1,5 +1,3 @@
-# Datavisualisatie-Barcelona-Live-API-data
-
 # Barcelona Live API Data Visualisation
 # This project visualizes live data from the Barcelona API using Three.js.
 
