@@ -2,114 +2,139 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8"/>
-        <title>Barcelona Temperatuur Visualisatie</title>
+        <title>Barcelona Bus Stops</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+        <!-- Leaflet -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+        <!-- PapaParse -->
+        <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
         <style>
-            body {
+            body,
+            html {
                 margin: 0;
-                overflow: hidden;
+                height: 100%;
+                font-family: sans-serif;
             }
-            canvas {
-                display: block;
+
+            #map {
+                width: 100%;
+                height: 100%;
             }
-            #info {
+
+            #filterUI {
                 position: absolute;
                 top: 10px;
-                left: 10px;
-                background: rgba(0, 0, 0, 0.6);
-                color: white;
+                left: 50px;
+                z-index: 1000;
+                background: rgba(255, 255, 255, 0.9);
                 padding: 10px;
-                font-family: sans-serif;
-                font-size: 14px;
-                max-width: 250px;
+                border-radius: 8px;
+                box-shadow: 0 0 5px rgba(0,0,0,0.3);
             }
         </style>
     </head>
     <body>
-        <div id="info">Laden...</div>
+        <div id="filterUI">
+            <label for="typeSelect">Bus Type:</label>
+            <select id="typeSelect">
+                <option value="All">All</option>
+            </select>
+        </div>
+        <div id="map"></div>
 
-        <!-- ✅ ENKEL DIT SCRIPT - gebruik géén andere script tags! -->
-        <script type="module">
-            import * as THREE from 'https://jspm.dev/three';
-            import {OrbitControls} from 'https://jspm.dev/three/examples/jsm/controls/OrbitControls.js';
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x101010);
+        <script>
+            const map = L
+                .map('map')
+                .setView([
+                    41.3851, 2.1734
+                ], 13);
 
-            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera
-                .position
-                .set(0, 20, 60);
+            L
+                .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap contributors'})
+                .addTo(map);
 
-            const renderer = new THREE.WebGLRenderer({antialias: true});
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            let busStops = [];
+            let markersLayer = L
+                .layerGroup()
+                .addTo(map);
+
+            function populateFilterOptions(data) {
+                const typeSet = new Set();
+
+                data.forEach(stop => {
+                    if (stop["Transport"]) {
+                        typeSet.add(stop["Transport"].trim());
+                    }
+                });
+
+                const select = document.getElementById("typeSelect");
+                typeSet.forEach(type => {
+                    const option = document.createElement("option");
+                    option.value = type;
+                    option.textContent = type;
+                    select.appendChild(option);
+                });
+            }
+
+            function renderStops(filterType) {
+                markersLayer.clearLayers();
+
+                busStops.forEach(stop => {
+                    if (!stop.Latitude || !stop.Longitude) 
+                        return;
+                    
+                    // Filter op Transport-type
+                    if (filterType !== "All" && stop["Transport"] !== filterType) 
+                        return;
+                    
+                    const lat = parseFloat(stop.Latitude);
+                    const lng = parseFloat(stop.Longitude);
+
+                    const marker = L
+                        .circleMarker([
+                            lat, lng
+                        ], {
+                            radius: 4,
+                            fillColor: "#ff5533",
+                            color: "#fff",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        })
+                        .bindPopup(`
+                    <strong>${stop["Bus.Stop"] || "Onbekende halte"}</strong><br/>
+                    Type: ${stop["Transport"] || "?"}<br/>
+                    District: ${stop["District.Name"] || "?"}<br/>
+                    Neighborhood: ${stop["Neighborhood.Name"] || "?"}
+                `);
+
+                    markersLayer.addLayer(marker);
+                });
+            }
+
+            function loadData() {
+                Papa.parse("data/bus_stops.csv", {
+                    download: true,
+                    header: true,
+                    complete: (results) => {
+                        busStops = results.data;
+                        populateFilterOptions(busStops);
+                        renderStops("All");
+                    }
+                });
+            }
+
             document
-                .body
-                .appendChild(renderer.domElement);
+                .getElementById("typeSelect")
+                .addEventListener("change", (e) => {
+                    renderStops(e.target.value);
+                });
 
-            const controls = new OrbitControls(camera, renderer.domElement);
-
-            const light = new THREE.PointLight(0xffffff, 1);
-            light
-                .position
-                .set(10, 20, 10);
-            scene.add(light);
-
-            const ambient = new THREE.AmbientLight(0x404040);
-            scene.add(ambient);
-
-            const info = document.getElementById("info");
-
-            async function getWeatherData() {
-                const url = "https://api.open-meteo.com/v1/forecast?latitude=41.3888&longitude=2.159&hourly=temperature_2m&timezone=auto&timeformat=unixtime";
-                const res = await fetch(url);
-                const data = await res.json();
-                return data.hourly;
-            }
-
-            function createTemperatureGraph(times, temps) {
-                const points = [];
-                const maxTemp = Math.max(...temps);
-                const minTemp = Math.min(...temps);
-
-                for (let i = 0; i < temps.length; i++) {
-                    points.push(new THREE.Vector3(i - temps.length / 2, temps[i], 0));
-                }
-
-                const geometry = new THREE
-                    .BufferGeometry()
-                    .setFromPoints(points);
-                const material = new THREE.LineBasicMaterial({color: 0xffcc00});
-                const line = new THREE.Line(geometry, material);
-                scene.add(line);
-
-                const axesHelper = new THREE.AxesHelper(30);
-                scene.add(axesHelper);
-
-                info.innerHTML = `
-        🌤️ <strong>Temperatuur Barcelona (Live Data)</strong><br>
-        📈 Hoogste: ${maxTemp}°C<br>
-        📉 Laagste: ${minTemp}°C<br>
-        ⏱️ Uren vooruit: ${temps.length}<br>
-        🔗 <a href="https://open-meteo.com/" target="_blank" style="color:#ffd;">Bron: open-meteo.com</a><br>
-        🔄 Update: realtime bij herladen
-      `;
-            }
-
-            getWeatherData().then(data => {
-                createTemperatureGraph(data.time, data.temperature_2m);
-            });
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            function animate() {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            }
-            animate();
+            loadData();
         </script>
     </body>
 </html>
