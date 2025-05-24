@@ -123,17 +123,9 @@ Een interactieve kaart-applicatie gebouwd met HTML, JavaScript en Leaflet.js om 
    ```bash
    git clone <repository-url>
    ```
-2. **Installeer de vereiste afhankelijkheden**:
-   ```bash
-   npm install
-   ```
-3. **Start de ontwikkelserver**:
-   ```bash
-   npm start
-   ```
-4. **Open de html file via de live server extensie** en ga naar de browser om de applicatie te bekijken. of bekijk het project op [GitHub Pages](https://pgm-stefvanboven.github.io/Datavisualisatie-Barcelona-Live-API-data/).
-5. **Vervang de API-sleutels** in de JavaScript-bestanden met jouw eigen sleutels voor de luchtkwaliteits- en weer-API's.
-6. **Gebruik de knoppen** op de kaart om verschillende datalagen te bekijken en te filteren.
+2. **Open de html file via de live server extensie** en ga naar de browser om de applicatie te bekijken. of bekijk het project op [Barcelona project](https://pgm-stefvanboven.github.io/Datavisualisatie-Barcelona-Live-API-data/).
+3. **Vervang de API-sleutels** in de JavaScript-bestanden met jouw eigen sleutels voor de luchtkwaliteits- en weer-API's.
+4. **Gebruik de knoppen** op de kaart om verschillende datalagen te bekijken en te filteren.
 
 ## Korte reflectie
 Wat ik vooral geleerd heb tijdens dit project is hoe krachtig en tegelijk uitdagend het is om live data te combineren met interactieve visualisatie. In het begin vond ik het moeilijk om een goed idee te vinden. De meegegeven datasetlink werkte niet door serverproblemen, waardoor ik zelf op zoek moest naar alternatieven. Dat was frustrerend, omdat ik niet meteen wist waar te beginnen of welke gegevens bruikbaar zouden zijn.
