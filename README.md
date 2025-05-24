@@ -124,7 +124,9 @@ Een interactieve kaart-applicatie gebouwd met HTML, JavaScript en Leaflet.js om 
    git clone <repository-url>
    ```
 2. **Open de html file via de live server extensie** en ga naar de browser om de applicatie te bekijken. of bekijk het project op [Barcelona project](https://pgm-stefvanboven.github.io/Datavisualisatie-Barcelona-Live-API-data/).
+   
 3. **Vervang de API-sleutels** in de JavaScript-bestanden met jouw eigen sleutels voor de luchtkwaliteits- en weer-API's.
+   
 4. **Gebruik de knoppen** op de kaart om verschillende datalagen te bekijken en te filteren.
 
 ## Korte reflectie
