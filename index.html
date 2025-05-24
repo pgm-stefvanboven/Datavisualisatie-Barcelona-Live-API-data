@@ -5,84 +5,131 @@
         <title>Barcelona Bus Stops & Air Quality Map</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
         <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
         <style>
+            * {
+                box-sizing: border-box;
+            }
+
             body,
             html {
                 margin: 0;
                 height: 100%;
-                font-family: sans-serif;
+                font-family: 'Inter', sans-serif;
+                background-color: #f9f9f9;
+                color: #333;
             }
+
             #map {
                 width: 100%;
                 height: 100%;
             }
+
             #aqiFilterUI,
             #filterUI,
             #forecastSliderUI,
             #layerToggleUI {
                 position: absolute;
-                background: rgba(255, 255, 255, 0.9);
-                padding: 10px;
-                border-radius: 8px;
-                box-shadow: 0 0 5px rgba(0,0,0,0.3);
+                background: white;
+                padding: 12px 16px;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
                 z-index: 1000;
+                font-size: 14px;
             }
+
             #filterUI {
-                left: 50px;
-                top: 10px;
+                left: 55px;
+                top: 20px;
             }
+
             #layerToggleUI {
-                right: 10px;
-                top: 10px;
+                right: 20px;
+                top: 20px;
+                display: flex;
+                gap: 10px;
             }
+
             #aqiFilterUI {
-                right: 10px;
-                top: 70px;
+                right: 20px;
+                top: 80px;
                 display: none;
             }
+
             #forecastSliderUI {
-                left: 50px;
+                left: 20px;
                 bottom: 20px;
                 display: none;
             }
-            #heatToggleContainer {
-                position: absolute;
-                top: 130px;
-                right: 10px;
-                background: rgba(255,255,255,0.9);
-                padding: 10px;
-                border-radius: 8px;
-                box-shadow: 0 0 5px rgba(0,0,0,0.3);
-                z-index: 1000;
-                display: none;
-            }
+
             #layerToggleUI button {
-                margin: 0 5px;
-                padding: 8px 12px;
-                border: none;
-                background-color: #eee;
-                border-radius: 5px;
+                padding: 8px 14px;
+                border: 1px solid #007bff;
+                background-color: #ffffff;
+                color: #007bff;
+                border-radius: 6px;
                 cursor: pointer;
+                font-weight: 600;
+                transition: all 0.2s ease;
             }
+
+            #layerToggleUI button:hover {
+                background-color: #007bff;
+                color: white;
+            }
+
             #layerToggleUI button.active {
                 background-color: #007bff;
                 color: white;
-                font-weight: bold;
+                box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
             }
-            .legend {
-                background: rgba(255, 255, 255, 0.9);
-                padding: 10px;
-                line-height: 1.5;
-                border-radius: 8px;
-                box-shadow: 0 0 5px rgba(0,0,0,0.3);
+
+            label {
+                font-weight: 600;
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            input[type="range"],
+            select {
+                width: 100%;
+                padding: 6px;
                 font-size: 14px;
+                margin-top: 4px;
+                border: 1px solid #ccc;
+                border-radius: 6px;
             }
+
+            #forecastHourLabel {
+                display: inline-block;
+                margin-left: 8px;
+                font-weight: 500;
+                color: #444;
+            }
+
+            .legend {
+                background: white;
+                padding: 12px 16px;
+                line-height: 1.6;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                font-size: 14px;
+                position: relative;
+            }
+
+            .legend strong {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                font-size: 15px;
+            }
+
             .legend i {
-                width: 14px;
-                height: 14px;
+                width: 16px;
+                height: 16px;
                 float: left;
                 margin-right: 8px;
                 opacity: 0.9;
